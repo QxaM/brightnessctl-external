@@ -9,5 +9,44 @@ fi
 
 if ! [ -x "$(command -v ddcutil)" ]; then
   echo 'Sorry `ddcutil` is not installed on the system'
-  exit 1
+  exit 2
 fi
+
+LONGOPTS=help,get-brightness
+OPTIONS=hg
+
+PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS -- "$@") || exit 3
+eval set -- "$PARSED"
+
+while true; do
+  case "$1" in
+  -g | --get-brightness)
+    detectedMonitors=$(
+      ddcutil detect |
+        grep -E "Display [0-9]+" |
+        wc -l
+    )
+    for ((i = 1; i <= $detectedMonitors; i++)); do
+      currentBrightness=$(ddcutil -d $i getvcp 10 -t | awk '{print $4}')
+      echo "D-$i B $currentBrightness"
+    done
+    exit 0
+    shift
+    ;;
+  -- | -h | --help)
+    printf "External monitor settings helper\n"
+
+    printf "Available options:\n"
+    printf "\\t-h, --help\n"
+    printf "\\t\\tPrint this help\n"
+    printf "\\t-g, --get-brightness\n"
+    printf "\\t\\tReturn brightness of all monitors\n"
+    shift
+    exit 0
+    ;;
+  *)
+    echo "Programming error"
+    exit 3
+    ;;
+  esac
+done
