@@ -6,3 +6,8 @@ if [[ $? -ne 4 ]]; then
   echo 'Sorry,`getopt --test` failed in this environment.'
   exit 1
 fi
+
+if ! [ -x "$(command -v ddcutil)" ]; then
+  echo 'Sorry `ddcutil` is not installed on the system'
+  exit 1
+fi
