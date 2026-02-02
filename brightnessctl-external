@@ -1,1 +1,8 @@
 #! /bin/bash
+
+# Ignore errexit with '&& true'
+getopt --test >/dev/null && true
+if [[ $? -ne 4 ]]; then
+  echo 'Sorry,`getopt --test` failed in this environment.'
+  exit 1
+fi
