@@ -26,14 +26,13 @@ while true; do
         grep -E "Display [0-9]+" |
         wc -l
     )
-    for ((i = 1; i <= $detectedMonitors; i++)); do
-      currentBrightness=$(ddcutil -d $i getvcp 10 -t | awk '{print $4}')
-      echo "D-$i B $currentBrightness"
-    done
+    seq $detectedMonitors |
+      xargs -n 1 -P $detectedMonitors \
+        sh -c "ddcutil -d \$1 getvcp 10 -t | awk -v monitor=\$1 '{print \"D-\"monitor\" B \"\$4}'" sh
     exit 0
     shift
     ;;
-  -- | -h | --help)
+  -h | --help)
     printf "External monitor settings helper\n"
 
     printf "Available options:\n"
@@ -41,12 +40,36 @@ while true; do
     printf "\\t\\tPrint this help\n"
     printf "\\t-g, --get-brightness\n"
     printf "\\t\\tReturn brightness of all monitors\n"
+    printf "\\t[value]\n"
+    printf "\\t\\tBrightness value to set - availalbe values between 10-100\n"
+
     shift
+    exit 0
+    ;;
+  --)
+    # Options parameters are parsed and now parsing not found values
+    shift
+
+    if ! [[ $1 =~ ^(100|[1-9][0-9])$ ]]; then
+      echo "Value invalid - enter value between 10 - 100 (inclusive)"
+      exit 5
+    fi
+
+    export brightness=$1
+    detectedMonitors=$(
+      ddcutil detect |
+        grep -E "Display [0-9]+" |
+        wc -l
+    )
+
+    seq $detectedMonitors |
+      xargs -n 1 -P $detectedMonitors sh -c 'ddcutil -d $1 setvcp 10 $brightness' sh
+
     exit 0
     ;;
   *)
     echo "Programming error"
-    exit 3
+    exit 4
     ;;
   esac
 done
