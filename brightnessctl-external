@@ -12,8 +12,21 @@ if ! [ -x "$(command -v ddcutil)" ]; then
   exit 2
 fi
 
-LONGOPTS=help,get-brightness
-OPTIONS=hg
+WORKDIR_LOCATION="/tmp/brightnessctl-external"
+LAST_BRIGHTNESS="last-brightness"
+DEFAULT_BRIGHTNESS=90
+
+detect_monitors() {
+  local detectedMonitors=$(
+    ddcutil detect |
+      grep -E "Display [0-9]+" |
+      wc -l
+  )
+  echo $detectedMonitors
+}
+
+LONGOPTS=help,get-brightness,reset
+OPTIONS=hgr
 
 PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS -- "$@") || exit 3
 eval set -- "$PARSED"
@@ -21,14 +34,18 @@ eval set -- "$PARSED"
 while true; do
   case "$1" in
   -g | --get-brightness)
-    detectedMonitors=$(
-      ddcutil detect |
-        grep -E "Display [0-9]+" |
-        wc -l
-    )
+    detectedMonitors=$(detect_monitors)
     seq $detectedMonitors |
       xargs -n 1 -P $detectedMonitors \
         sh -c "ddcutil -d \$1 getvcp 10 -t | awk -v monitor=\$1 '{print \"D-\"monitor\" B \"\$4}'" sh
+    exit 0
+    shift
+    ;;
+  -r | --reset)
+    detectedMonitors=$(detect_monitors)
+    seq $detectedMonitors |
+      xargs -n 1 -P $detectedMonitors \
+        sh -c "(grep D-\$1 $WORKDIR_LOCATION/$LAST_BRIGHTNESS || echo \"D-\$1 B $DEFAULT_BRIGHTNESS\") | awk -v monitor=\$1 '{printf \"ddcutil -d %d setvcp 10 %d\", monitor, \$3}' | sh " sh
     exit 0
     shift
     ;;
@@ -55,13 +72,19 @@ while true; do
       exit 5
     fi
 
-    export brightness=$1
-    detectedMonitors=$(
-      ddcutil detect |
-        grep -E "Display [0-9]+" |
-        wc -l
-    )
+    mkdir -p $WORKDIR_LOCATION
 
+    export brightness=$1
+    detectedMonitors=$(detect_monitors)
+
+    printf "" >"$WORKDIR_LOCATION/$LAST_BRIGHTNESS"
+
+    # Read current brightness for monitors
+    seq $detectedMonitors |
+      xargs -n 1 -P $detectedMonitors \
+        sh -c "ddcutil -d \$1 getvcp 10 -t | awk -v monitor=\$1 '{print \"D-\"monitor\" B \"\$4}' >> $WORKDIR_LOCATION/$LAST_BRIGHTNESS" sh
+
+    # Set new brightness value
     seq $detectedMonitors |
       xargs -n 1 -P $detectedMonitors sh -c 'ddcutil -d $1 setvcp 10 $brightness' sh
 
