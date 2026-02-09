@@ -45,7 +45,7 @@ while true; do
     detectedMonitors=$(detect_monitors)
     seq $detectedMonitors |
       xargs -n 1 -P $detectedMonitors \
-        sh -c "(grep D-\$1 $WORKDIR_LOCATION/$LAST_BRIGHTNESS || echo \"D-\$1 B $DEFAULT_BRIGHTNESS\") | awk -v monitor=\$1 '{printf \"ddcutil -d %d setvcp 10 %d\", monitor, \$3}' | sh " sh
+        sh -c "(grep \"D-\$1 B \(100\|[1-9][0-9]$\)\" $WORKDIR_LOCATION/$LAST_BRIGHTNESS || echo \"D-\$1 B $DEFAULT_BRIGHTNESS\") | awk -v monitor=\$1 '{printf \"ddcutil -d %d setvcp 10 %d\", monitor, \$3}' | sh " sh
     exit 0
     shift
     ;;
