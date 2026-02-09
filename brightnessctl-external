@@ -57,6 +57,8 @@ while true; do
     printf "\\t\\tPrint this help\n"
     printf "\\t-g, --get-brightness\n"
     printf "\\t\\tReturn brightness of all monitors\n"
+    printf "\\t-r, --reset\n"
+    printf "\\t\\tSet previously set brightness value\n"
     printf "\\t[value]\n"
     printf "\\t\\tBrightness value to set - availalbe values between 10-100\n"
 
